@@ -1,0 +1,630 @@
+{
+  "name": "Customer_Support_AI_Automation",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1472,
+        16
+      ],
+      "id": "ecd7684e-be39-4fb3-b492-d1b1516d0c31",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bb90c8cb-3237-41bc-8732-5597bb72c3b1",
+              "name": "=message",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1280,
+        -128
+      ],
+      "id": "2fdb57be-21b3-4a3b-8ab7-e35e58cdd92d",
+      "name": "Customer Support Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "75688259-2015-4255-b330-4536998a4c1b",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "60235645-ff2b-421f-8782-2d4b159cb9b7",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -1072,
+        0
+      ],
+      "id": "deac5762-7a60-4d32-bd8e-71bf33dcadde",
+      "name": "Validate Support Ticket"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an AI customer support classifier.\n\nClassify this customer message:\n{{ $json.message }}\n\nReturn ONLY valid JSON in this exact format:\n\n{\n  \"category\": \"Billing\",\n  \"priority\": \"High\",\n  \"assigned_queue\": \"Human Review\"\n}\n\nChoose:\ncategory: Billing, Technical, Delivery, Account, or General\npriority: High, Medium, or Low\nassigned_queue: Human Review or Routine\n\nDo not include explanations, markdown, or any text outside the JSON."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -816,
+        -160
+      ],
+      "id": "f41c0292-cb84-4446-a065-6d72ddfbb520",
+      "name": "AI Support Ticket Classifier",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "MvgbGjHWqKGJEdlT",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map((item, index) => {\n  const data = item.json;\n\n  let raw =\n    data.content?.parts?.[0]?.text ??\n    data.candidates?.[0]?.content?.parts?.[0]?.text ??\n    data.text ??\n    data.output ??\n    data.response;\n\n  if (typeof raw !== \"string\") {\n    throw new Error(\"AI response text not found for item \" + (index + 1));\n  }\n\n  raw = raw.trim()\n    .replace(/^```(?:json)?\\s*/i, \"\")\n    .replace(/\\s*```$/, \"\");\n\n  let result;\n  try {\n    result = JSON.parse(raw);\n  } catch (error) {\n    throw new Error(\"Invalid AI JSON for item \" + (index + 1) + \": \" + error.message);\n  }\n\n  return {\n    json: {\n      ticket_id: result.ticket_id,\n      category: result.category,\n      priority: result.priority,\n      suggested_response: result.suggested_response,\n      human_review_required: result.human_review_required\n    },\n    pairedItem: index\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        112
+      ],
+      "id": "1f419361-2d11-42bf-80d3-30d92898299b",
+      "name": "Parse AI Support Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "92090c6d-67e0-477e-861c-efbcae4f9552",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -336,
+        -128
+      ],
+      "id": "d02835ff-8150-41d6-9fe9-a4a214304ad4",
+      "name": "Validate AI Classification"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "deea5736-526b-405e-b6e4-af24f011c572",
+              "name": "queue",
+              "value": "Human Review",
+              "type": "string"
+            },
+            {
+              "id": "67e0939c-1e5a-4dac-aefe-bd07f5d34a71",
+              "name": "review_status",
+              "value": "Pending Human Review",
+              "type": "string"
+            },
+            {
+              "id": "ebea40b0-e6d5-403f-8026-7b39276a7c3b",
+              "name": "assigned_to",
+              "value": "Support Agent",
+              "type": "string"
+            },
+            {
+              "id": "4847b67c-2d77-4a15-acd0-bac1b60359e2",
+              "name": "response_status",
+              "value": "Draft - Not Sent",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        0,
+        -176
+      ],
+      "id": "51a6f4d8-635a-4d10-a877-8d6450bfdc3d",
+      "name": "Human Review Queue"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "25550f3d-2270-4c7c-85e4-8b82888bd533",
+              "name": "queue",
+              "value": "Routine Support",
+              "type": "string"
+            },
+            {
+              "id": "2a3500be-f8fa-4161-b692-afe2ddabe257",
+              "name": "review_status",
+              "value": "Ready for Routine Handling",
+              "type": "string"
+            },
+            {
+              "id": "b7b130d9-b827-41ff-87f6-dfbcdf15d3ed",
+              "name": "assigned_to",
+              "value": "Support Automation",
+              "type": "string"
+            },
+            {
+              "id": "a8b6e703-37bc-4b72-a416-bd052c2c29e9",
+              "name": "response_status",
+              "value": "Draft - Not Sent",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        160,
+        80
+      ],
+      "id": "799cd166-6050-490d-8c65-88c1260af5cc",
+      "name": "Routine Support Queue"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bfaec26b-2956-47cd-8697-2f2850de646c",
+              "name": "queue",
+              "value": "Invalid Ticket",
+              "type": "string"
+            },
+            {
+              "id": "65b7ed42-de3c-4d12-bb98-19c568acb6a1",
+              "name": "validation_status",
+              "value": "Failed Input Validation",
+              "type": "string"
+            },
+            {
+              "id": "89082fee-00e5-407d-86eb-01ec38c0a762",
+              "name": "review_status",
+              "value": "Needs Human Review",
+              "type": "string"
+            },
+            {
+              "id": "035a9c02-095c-4a67-bd0d-03e8eee3e29e",
+              "name": "error_reason",
+              "value": "Missing required ticket information",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -768,
+        112
+      ],
+      "id": "1bc3abea-cd82-4b6c-ac95-27c0022e6b42",
+      "name": "Invalid Ticket Queue"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-support",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -1440,
+        -208
+      ],
+      "id": "a60e9297-be94-47ad-8f92-367b40ae1704",
+      "name": "Webhook",
+      "webhookId": "e6a8d25e-337a-481c-9f0c-01b870e8000d"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "13U9gqSdSYze4-ZfyHNflMztrnyjVAA5B9OJnexXy-UA",
+          "mode": "list",
+          "cachedResultName": "AI_Customer_Support_Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13U9gqSdSYze4-ZfyHNflMztrnyjVAA5B9OJnexXy-UA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13U9gqSdSYze4-ZfyHNflMztrnyjVAA5B9OJnexXy-UA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ticket_ID": "={{ $('Webhook').first().json.body.ticket_id }}",
+            "Customer_Name": "={{ $('Webhook').item.json.body.customer_name }}",
+            "Message": "={{ $('Webhook').item.json.body.message }}",
+            "Category": "={{ $('Parse AI Support Response').item.json.category }}",
+            "Priority": "={{ $('Parse AI Support Response').item.json.priority }}"
+          },
+          "matchingColumns": [
+            "Ticket_ID"
+          ],
+          "schema": [
+            {
+              "id": "Ticket_ID",
+              "displayName": "Ticket_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -240,
+        112
+      ],
+      "id": "1931a596-cbfd-467f-898c-d9eedd1e27f0",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k8HPnGkg1XSaxX8V",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "13U9gqSdSYze4-ZfyHNflMztrnyjVAA5B9OJnexXy-UA",
+          "mode": "list",
+          "cachedResultName": "AI_Customer_Support_Tickets",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13U9gqSdSYze4-ZfyHNflMztrnyjVAA5B9OJnexXy-UA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13U9gqSdSYze4-ZfyHNflMztrnyjVAA5B9OJnexXy-UA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ticket_ID": "={{ $('Webhook').first().json.body.ticket_id }}",
+            "Customer_Name": "={{ $('Webhook').first().json.body.customer_name }}",
+            "Message": "={{ $('Webhook').first().json.body.message }}",
+            "Category": "={{ $('Parse AI Support Response').first().json.category }}",
+            "Priority": "={{ $('Parse AI Support Response').first().json.priority }}"
+          },
+          "matchingColumns": [
+            "Ticket_ID"
+          ],
+          "schema": [
+            {
+              "id": "Ticket_ID",
+              "displayName": "Ticket_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        -176
+      ],
+      "id": "ce85f7e7-e656-492c-87f2-461930332cef",
+      "name": "Append or update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k8HPnGkg1XSaxX8V",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Customer Support Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Support Data": {
+      "main": [
+        [
+          {
+            "node": "Validate Support Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Support Ticket": {
+      "main": [
+        [
+          {
+            "node": "AI Support Ticket Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Ticket Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Support Ticket Classifier": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Support Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Parse AI Support Response": {
+      "main": [
+        [
+          {
+            "node": "Validate AI Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate AI Classification": {
+      "main": [
+        [
+          {
+            "node": "Human Review Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Routine Support Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Customer Support Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Routine Support Queue": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Review Queue": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9f15d96b-1f47-4329-9e0f-c0aee89f4d97",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "be4239576b3c9d9c22427e052ce5ce56a81b5a688b2f787f48e81e435cf18e5f"
+  },
+  "nodeGroups": [],
+  "id": "21L13hTtLIOubEpz",
+  "tags": []
+}
