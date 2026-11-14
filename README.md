@@ -6,6 +6,27 @@
 
 An AI-powered customer support automation prototype built with n8n and Google Gemini. The system receives customer requests through a webhook, classifies support issues, assigns priority levels, routes tickets to appropriate support queues, and records ticket information in Google Sheets.
 
+## Live Project Demonstration
+
+**Watch the AI Customer Support Automation in action:**
+
+[▶ Watch the Workflow Demonstration on YouTube](https://youtu.be/4vqllY8Q-ZY)
+
+This demonstration showcases an AI-powered customer support workflow developed using n8n Cloud, Google Gemini, Webhooks, JavaScript, and Google Sheets.
+
+### Demonstrated Capabilities
+
+- Automated customer support ticket intake through an API webhook
+- AI-powered ticket classification and prioritization
+- Conditional routing for high-priority and routine requests
+- Human-review queue for urgent support tickets
+- Automated ticket tracking through Google Sheets
+- End-to-end workflow execution and testing
+
+**Business Use Case:** Demonstrates how AI automation can streamline customer support ticket processing, reduce repetitive manual classification, and provide a foundation for scalable customer service operations.
+
+**Project Status:** Functional prototype with demonstrated workflow execution. Production deployment would require additional security, monitoring, and helpdesk integration.
+
 ## Business Problem
 
 Customer support teams spend significant time manually reviewing, categorizing, and prioritizing incoming requests.
